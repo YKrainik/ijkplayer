@@ -217,4 +217,7 @@ void           *ijkmp_set_weak_thiz(IjkMediaPlayer *mp, void *weak_thiz);
 /* need to call msg_free_res for freeing the resouce obtained in msg */
 int             ijkmp_get_msg(IjkMediaPlayer *mp, AVMessage *msg, int block);
 
+void           *ijkmp_get_context(IjkMediaPlayer *mp);
+int             ijkmp_set_subtitle_index(IjkMediaPlayer *mp, int index);
+
 #endif

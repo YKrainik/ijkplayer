@@ -44,6 +44,8 @@ NSString *const IJKMPMoviePlayerDidSeekCompleteNotification = @"IJKMPMoviePlayer
 NSString *const IJKMPMoviePlayerDidSeekCompleteTargetKey = @"IJKMPMoviePlayerDidSeekCompleteTargetKey";
 NSString *const IJKMPMoviePlayerDidSeekCompleteErrorKey = @"IJKMPMoviePlayerDidSeekCompleteErrorKey";
 
+NSString *const IJKMPMoviePlayerTimedTextNotification = @"IJKMPMediaPlaybackTimedTextNotification";
+
 @implementation IJKMediaUrlOpenData {
     NSString *_url;
     BOOL _handled;

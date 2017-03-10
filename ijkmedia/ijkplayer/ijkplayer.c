@@ -786,3 +786,27 @@ int ijkmp_get_msg(IjkMediaPlayer *mp, AVMessage *msg, int block)
 
     return -1;
 }
+
+void *ijkmp_get_context(IjkMediaPlayer *mp)
+{
+    return mp->ffplayer->is->ic;
+}
+
+int ijkmp_set_subtitle_index(IjkMediaPlayer *mp, int index)
+{
+    if (mp->ffplayer->is->subtitle_stream >= 0) {
+        ffp_stream_component_close(mp->ffplayer, mp->ffplayer->is->subtitle_stream);
+    }
+
+    int result;
+
+    if (index >= 0) {
+        mp->ffplayer->subtitle = 1;
+        result = ffp_stream_component_open(mp->ffplayer, index);
+    } else {
+        mp->ffplayer->subtitle = 0;
+        result = 0;
+    }
+
+    return result;
+}

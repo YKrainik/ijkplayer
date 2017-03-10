@@ -98,6 +98,9 @@ typedef NS_ENUM(NSInteger, IJKMPMovieTimeOption) {
 @property (nonatomic) float playbackRate;
 @property (nonatomic) float playbackVolume;
 
+@property (nonatomic) int subtitleTrackIndex;
+@property (nonatomic, readonly) NSArray *subtitles;
+
 - (UIImage *)thumbnailImageAtCurrentTime;
 
 #pragma mark Notifications
@@ -134,6 +137,9 @@ IJK_EXTERN NSString* const IJKMPMoviePlayerLoadStateDidChangeNotification;
 
 // Posted when the movie player begins or ends playing video via AirPlay.
 IJK_EXTERN NSString* const IJKMPMoviePlayerIsAirPlayVideoActiveDidChangeNotification;
+
+//Posted when subtitle should be shown.
+IJK_EXTERN NSString* const IJKMPMoviePlayerTimedTextNotification;
 
 // -----------------------------------------------------------------------------
 // Movie Property Notifications

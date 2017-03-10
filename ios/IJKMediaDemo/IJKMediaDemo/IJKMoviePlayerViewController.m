@@ -20,6 +20,12 @@
 #import "IJKCommon.h"
 #import "IJKDemoHistory.h"
 
+@interface IJKVideoViewController ()
+
+@property (nonatomic, strong) UILabel *subtitleLabel;
+
+@end
+
 @implementation IJKVideoViewController
 
 - (void)dealloc
@@ -28,11 +34,11 @@
 
 + (void)presentFromViewController:(UIViewController *)viewController withTitle:(NSString *)title URL:(NSURL *)url completion:(void (^)())completion {
     IJKDemoHistoryItem *historyItem = [[IJKDemoHistoryItem alloc] init];
-    
+
     historyItem.title = title;
     historyItem.url = url;
     [[IJKDemoHistory instance] add:historyItem];
-    
+
     [viewController presentViewController:[[IJKVideoViewController alloc] initWithURL:url] animated:YES completion:completion];
 }
 
@@ -53,14 +59,14 @@
     return self;
 }
 
-#define EXPECTED_IJKPLAYER_VERSION (1 << 16) & 0xFF) | 
+#define EXPECTED_IJKPLAYER_VERSION (1 << 16) & 0xFF) |
 - (void)viewDidLoad
 {
     [super viewDidLoad];
     // Do any additional setup after loading the view from its nib.
 
-//    [[UIApplication sharedApplication] setStatusBarHidden:YES];
-//    [[UIApplication sharedApplication] setStatusBarOrientation:UIInterfaceOrientationLandscapeLeft animated:NO];
+    //    [[UIApplication sharedApplication] setStatusBarHidden:YES];
+    //    [[UIApplication sharedApplication] setStatusBarOrientation:UIInterfaceOrientationLandscapeLeft animated:NO];
 
 #ifdef DEBUG
     [IJKFFMoviePlayerController setLogReport:YES];
@@ -75,6 +81,8 @@
 
     IJKFFOptions *options = [IJKFFOptions optionsByDefault];
 
+    //    [options setPlayerOptionIntValue:1  forKey:@"subtitle"];
+
     self.player = [[IJKFFMoviePlayerController alloc] initWithContentURL:self.url withOptions:options];
     self.player.view.autoresizingMask = UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;
     self.player.view.frame = self.view.bounds;
@@ -85,12 +93,39 @@
     [self.view addSubview:self.player.view];
     [self.view addSubview:self.mediaControl];
 
+    //self.subtitleLabel = [[UILabel alloc] initWithFrame:self.view.bounds];
+    self.subtitleLabel = [[UILabel alloc] init];
+    self.subtitleLabel.backgroundColor = [UIColor clearColor];
+    //    self.subtitleLabel.backgroundColor = [UIColor redColor];
+    self.subtitleLabel.numberOfLines = -1;
+    self.subtitleLabel.font = [UIFont systemFontOfSize:22];
+    self.subtitleLabel.textAlignment = NSTextAlignmentCenter;
+    self.subtitleLabel.textColor = [UIColor whiteColor];
+
+    self.subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.player.view addSubview:self.subtitleLabel];
+
+    //    NSLayoutConstraint *constraint = [NSLayoutConstraint constraintWithItem:self.subtitleLabel attribute:NSLayoutAttributeTop relatedBy:NSLayoutRelationEqual toItem:self.player.view attribute:NSLayoutAttributeTop multiplier:1 constant:0];
+    //    [self.player.view addConstraint:constraint];
+
+    NSLayoutConstraint *constraint = [NSLayoutConstraint constraintWithItem:self.subtitleLabel attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:self.player.view attribute:NSLayoutAttributeHeight multiplier:0.2 constant:0];
+    [self.player.view addConstraint:constraint];
+
+    constraint = [NSLayoutConstraint constraintWithItem:self.subtitleLabel attribute:NSLayoutAttributeBottom relatedBy:NSLayoutRelationEqual toItem:self.player.view attribute:NSLayoutAttributeBottom multiplier:1 constant:0];
+    [self.player.view addConstraint:constraint];
+
+    constraint = [NSLayoutConstraint constraintWithItem:self.subtitleLabel attribute:NSLayoutAttributeLeft relatedBy:NSLayoutRelationEqual toItem:self.player.view attribute:NSLayoutAttributeLeft multiplier:1 constant:0];
+    [self.player.view addConstraint:constraint];
+
+    constraint = [NSLayoutConstraint constraintWithItem:self.subtitleLabel attribute:NSLayoutAttributeRight relatedBy:NSLayoutRelationEqual toItem:self.player.view attribute:NSLayoutAttributeRight multiplier:1 constant:0];
+    [self.player.view addConstraint:constraint];
+
     self.mediaControl.delegatePlayer = self.player;
 }
 
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
-    
+
     [self installMovieNotificationObservers];
 
     [self.player prepareToPlay];
@@ -98,7 +133,7 @@
 
 - (void)viewDidDisappear:(BOOL)animated {
     [super viewDidDisappear:animated];
-    
+
     [self.player shutdown];
     [self removeMovieNotificationObservers];
 }
@@ -140,7 +175,7 @@
     if ([self.player isKindOfClass:[IJKFFMoviePlayerController class]]) {
         IJKFFMoviePlayerController *player = self.player;
         player.shouldShowHudView = !player.shouldShowHudView;
-        
+
         sender.title = (player.shouldShowHudView ? @"HUD On" : @"HUD Off");
     }
 }
@@ -151,10 +186,29 @@
     [self.mediaControl refreshMediaControl];
 }
 
+static int subtitleIndex = -1;
+
 - (IBAction)onClickPause:(id)sender
 {
-    [self.player pause];
-    [self.mediaControl refreshMediaControl];
+    //    [self.player pause];
+    //    [self.mediaControl refreshMediaControl];
+    NSArray *subtitles = [self.player subtitles];
+
+    NSLog(@"%@", subtitles);
+
+    subtitleIndex++;
+    if (subtitleIndex >= subtitles.count) {
+        subtitleIndex = -1;
+    }
+
+    if (subtitleIndex >= 0) {
+        NSDictionary *subtitleDict = subtitles[subtitleIndex];
+        int index = [[subtitleDict objectForKey:@"index"] intValue];
+        self.player.subtitleTrackIndex = index;
+    } else {
+        self.player.subtitleTrackIndex = -1;
+        self.subtitleLabel.text = @"";
+    }
 }
 
 - (IBAction)didSliderTouchDown
@@ -272,29 +326,41 @@
     }
 }
 
+- (void)movieDidGetTimedText:(NSNotification*)notification
+{
+    NSString *text = notification.userInfo[@"timedText"];
+    NSLog(@"TEXT: %@", text);
+    self.subtitleLabel.text = text;
+}
+
 #pragma mark Install Movie Notifications
 
 /* Register observers for the various movie object notifications. */
 -(void)installMovieNotificationObservers
 {
-	[[NSNotificationCenter defaultCenter] addObserver:self
+    [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(loadStateDidChange:)
                                                  name:IJKMPMoviePlayerLoadStateDidChangeNotification
                                                object:_player];
 
-	[[NSNotificationCenter defaultCenter] addObserver:self
+    [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(moviePlayBackDidFinish:)
                                                  name:IJKMPMoviePlayerPlaybackDidFinishNotification
                                                object:_player];
 
-	[[NSNotificationCenter defaultCenter] addObserver:self
+    [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(mediaIsPreparedToPlayDidChange:)
                                                  name:IJKMPMediaPlaybackIsPreparedToPlayDidChangeNotification
                                                object:_player];
 
-	[[NSNotificationCenter defaultCenter] addObserver:self
+    [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(moviePlayBackStateDidChange:)
                                                  name:IJKMPMoviePlayerPlaybackStateDidChangeNotification
+                                               object:_player];
+
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(movieDidGetTimedText:)
+                                                 name:IJKMPMoviePlayerTimedTextNotification
                                                object:_player];
 }
 
@@ -307,6 +373,7 @@
     [[NSNotificationCenter defaultCenter]removeObserver:self name:IJKMPMoviePlayerPlaybackDidFinishNotification object:_player];
     [[NSNotificationCenter defaultCenter]removeObserver:self name:IJKMPMediaPlaybackIsPreparedToPlayDidChangeNotification object:_player];
     [[NSNotificationCenter defaultCenter]removeObserver:self name:IJKMPMoviePlayerPlaybackStateDidChangeNotification object:_player];
+    [[NSNotificationCenter defaultCenter]removeObserver:self name:IJKMPMoviePlayerTimedTextNotification object:_player];
 }
 
 @end

@@ -45,6 +45,8 @@ static const char *kIJKFFRequiredFFmpegVersion = "ff3.2--ijk0.7.6--20170203--001
 
 @interface IJKFFMoviePlayerController()
 
+@property (nonatomic, strong) NSArray *subtitles;
+
 @end
 
 @implementation IJKFFMoviePlayerController {
@@ -217,7 +219,7 @@ void IJKFFIOStatCompleteRegister(void (*cb)(const char *url,
         [_glView setHudValue:nil forKey:@"t-preroll"];
         [_glView setHudValue:nil forKey:@"t-http-open"];
         [_glView setHudValue:nil forKey:@"t-http-seek"];
-        
+
         self.shouldShowHudView = options.showHudView;
 
         ijkmp_ios_set_glview(_mediaPlayer, _glView);
@@ -251,7 +253,7 @@ void IJKFFIOStatCompleteRegister(void (*cb)(const char *url,
 
 - (void)dealloc
 {
-//    [self unregisterApplicationObservers];
+    //    [self unregisterApplicationObservers];
 }
 
 - (void)setShouldAutoplay:(BOOL)shouldAutoplay
@@ -313,7 +315,7 @@ void IJKFFIOStatCompleteRegister(void (*cb)(const char *url,
     if (!_mediaPlayer)
         return;
 
-//    [self stopHudTimer];
+    //    [self stopHudTimer];
     ijkmp_pause(_mediaPlayer);
 }
 
@@ -656,6 +658,13 @@ inline static int getPlayerOption(IJKFFOptionCategory category)
     return _glView.fps;
 }
 
+- (void)setSubtitleTrackIndex:(int)subtitleTrackIndex
+{
+    ijkmp_set_subtitle_index(_mediaPlayer, subtitleTrackIndex);
+    NSTimeInterval ret = ijkmp_get_current_position(_mediaPlayer);
+    ijkmp_seek_to(_mediaPlayer, ret);
+}
+
 inline static NSString *formatedDurationMilli(int64_t duration) {
     if (duration >=  1000) {
         return [NSString stringWithFormat:@"%.2f sec", ((float)duration) / 1000];
@@ -750,7 +759,7 @@ inline static NSString *formatedSpeed(int64_t bytes, int64_t elapsed_milli) {
 
     int64_t bitRate = ijkmp_get_property_int64(_mediaPlayer, FFP_PROP_INT64_BIT_RATE, 0);
     [_glView setHudValue:[NSString stringWithFormat:@"-%@, %@",
-                         formatedSize(_cacheStat.cache_buf_forwards),
+                          formatedSize(_cacheStat.cache_buf_forwards),
                           formatedDurationBytesAndBitrate(_cacheStat.cache_buf_forwards, bitRate)] forKey:@"cache-forwards"];
     [_glView setHudValue:formatedSize(_cacheStat.cache_physical_pos) forKey:@"cache-physical-pos"];
     [_glView setHudValue:formatedSize(_cacheStat.cache_file_pos) forKey:@"cache-file-pos"];
@@ -901,15 +910,42 @@ inline static void fillMetaInternal(NSMutableDictionary *meta, IjkMediaMeta *raw
              object:self];
 
             [[NSNotificationCenter defaultCenter]
-                postNotificationName:IJKMPMoviePlayerPlaybackDidFinishNotification
-                object:self
-                userInfo:@{
-                    IJKMPMoviePlayerPlaybackDidFinishReasonUserInfoKey: @(IJKMPMovieFinishReasonPlaybackError),
-                    @"error": @(avmsg->arg1)}];
+             postNotificationName:IJKMPMoviePlayerPlaybackDidFinishNotification
+             object:self
+             userInfo:@{
+                        IJKMPMoviePlayerPlaybackDidFinishReasonUserInfoKey: @(IJKMPMovieFinishReasonPlaybackError),
+                        @"error": @(avmsg->arg1)}];
             break;
         }
         case FFP_MSG_PREPARED: {
             NSLog(@"FFP_MSG_PREPARED:\n");
+
+            NSMutableArray *subtitles = [NSMutableArray array];
+
+            AVFormatContext *context = ijkmp_get_context(_mediaPlayer);
+
+            for (NSUInteger i = 0; i < context->nb_streams; i++) {
+                AVStream *st = context->streams[i];
+                if (st->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE) {
+
+                    NSMutableString *ms = [NSMutableString string];
+
+                    AVDictionaryEntry *lang = av_dict_get(st->metadata, "title", NULL, 0);
+
+                    if (lang && lang->value) {
+                        NSString *title = [[NSString alloc] initWithUTF8String:lang->value];
+                        [ms appendString:title];
+                    }
+
+                    lang = av_dict_get(st->metadata, "language", NULL, 0);
+                    if (lang && lang->value) {
+                        [ms appendFormat:@" - [%s]", lang->value];
+                    }
+                    [subtitles addObject:@{@"index" : [NSNumber numberWithInt:st->index], @"title" : ms}];
+                }
+            }
+
+            self.subtitles = [subtitles copy];
 
             _monitor.prepareDuration = (int64_t)SDL_GetTickHR() - _monitor.prepareStartTick;
             int64_t vdec = ijkmp_get_property_int64(_mediaPlayer, FFP_PROP_INT64_VIDEO_DECODER, FFP_PROPV_DECODER_UNKNOWN);
@@ -1123,8 +1159,17 @@ inline static void fillMetaInternal(NSMutableDictionary *meta, IjkMediaMeta *raw
              object:self];
             break;
         }
+        case FFP_MSG_TIMED_TEXT: {
+            //TODO: check avmsg->obj
+            char *timedText = (char *)avmsg->obj;
+            NSString *text = [NSString stringWithUTF8String:timedText];
+            [[NSNotificationCenter defaultCenter]
+             postNotificationName:IJKMPMoviePlayerTimedTextNotification
+             object:self userInfo:@{@"timedText" : text}];
+            break;
+        }
         default:
-            // NSLog(@"unknown FFP_MSG_xxx(%d)\n", avmsg->what);
+            NSLog(@"unknown FFP_MSG_xxx(%d)\n", avmsg->what);
             break;
     }
 
@@ -1200,7 +1245,7 @@ static int onInjectIOControl(IJKFFMoviePlayerController *mpc, id<IJKMediaUrlOpen
             realData->url[sizeof(realData->url) - 1] = 0;
         }
     }
-    
+
     return 0;
 }
 
@@ -1433,7 +1478,7 @@ static int ijkff_inject_callback(void *opaque, int message, void *data, size_t d
             scale = 1.0f;
         _glView.scaleFactor = scale;
     }
-     [[NSNotificationCenter defaultCenter] postNotificationName:IJKMPMoviePlayerIsAirPlayVideoActiveDidChangeNotification object:nil userInfo:nil];
+    [[NSNotificationCenter defaultCenter] postNotificationName:IJKMPMoviePlayerIsAirPlayVideoActiveDidChangeNotification object:nil userInfo:nil];
 }
 
 

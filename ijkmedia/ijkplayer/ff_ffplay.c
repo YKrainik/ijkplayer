@@ -2667,7 +2667,7 @@ static int read_thread(void *arg)
     if (!ffp->audio_disable)
         st_index[AVMEDIA_TYPE_AUDIO] =
             av_find_best_stream(ic, AVMEDIA_TYPE_AUDIO,
-                                st_index[AVMEDIA_TYPE_AUDIO],
+                                st_index[AVMEDIA_TYPE_AUDIO],   
                                 st_index[AVMEDIA_TYPE_VIDEO],
                                 NULL, 0);
     if (!ffp->video_disable && !ffp->subtitle_disable)
@@ -4298,6 +4298,16 @@ void ffp_set_property_int64(FFPlayer *ffp, int id, int64_t value)
         default:
             break;
     }
+}
+
+int ffp_stream_component_open(FFPlayer *ffp, int index)
+{
+    return stream_component_open(ffp, index);
+}
+
+void ffp_stream_component_close(FFPlayer *ffp, int index)
+{
+    stream_component_close(ffp, index);
 }
 
 IjkMediaMeta *ffp_get_meta_l(FFPlayer *ffp)
