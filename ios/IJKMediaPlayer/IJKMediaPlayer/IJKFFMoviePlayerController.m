@@ -933,8 +933,11 @@ inline static void fillMetaInternal(NSMutableDictionary *meta, IjkMediaMeta *raw
                     AVDictionaryEntry *lang = av_dict_get(st->metadata, "title", NULL, 0);
 
                     if (lang && lang->value) {
-                        NSString *title = [[NSString alloc] initWithUTF8String:lang->value];
+                        NSString *title = [[[NSString alloc] initWithUTF8String:lang->value] stringByTrimmingCharactersInSet:
+                                           [NSCharacterSet whitespaceCharacterSet]];
                         [ms appendString:title];
+                    } else {
+                        [ms appendFormat:@"Track %lu", (unsigned long)subtitles.count + 1];
                     }
 
                     lang = av_dict_get(st->metadata, "language", NULL, 0);
