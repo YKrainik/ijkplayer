@@ -28,6 +28,8 @@
 @implementation IJKMPMoviePlayerController
 {
     IJKNotificationManager *_notificationManager;
+    int _subtitleTrackIndex;
+    NSArray *_subtitles;
 }
 
 @dynamic view;
@@ -46,6 +48,9 @@
 @synthesize isDanmakuMediaAirPlay = _isDanmakuMediaAirPlay;
 
 @synthesize numberOfBytesTransferred = _numberOfBytesTransferred;
+
+@synthesize subtitleTrackIndex = _subtitleTrackIndex;
+@synthesize subtitles = _subtitles;
 
 - (id)initWithContentURL:(NSURL *)aUrl
 {
