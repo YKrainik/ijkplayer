@@ -1166,6 +1166,11 @@ inline static void fillMetaInternal(NSMutableDictionary *meta, IjkMediaMeta *raw
             //TODO: check avmsg->obj
             char *timedText = (char *)avmsg->obj;
             NSString *text = [NSString stringWithUTF8String:timedText];
+
+            if (!text) {
+                text = @"";
+            }
+
             [[NSNotificationCenter defaultCenter]
              postNotificationName:IJKMPMoviePlayerTimedTextNotification
              object:self userInfo:@{@"timedText" : text}];
