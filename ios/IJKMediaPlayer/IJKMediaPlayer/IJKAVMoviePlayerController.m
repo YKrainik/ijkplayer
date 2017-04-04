@@ -169,6 +169,7 @@ static void *KVO_AVPlayerItem_playbackBufferEmpty       = &KVO_AVPlayerItem_play
 
 @synthesize subtitleTrackIndex = _subtitleTrackIndex;
 @synthesize subtitles = _subtitles;
+@synthesize audious = _audious;
 
 static IJKAVMoviePlayerController* instance;
 

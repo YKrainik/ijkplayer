@@ -219,5 +219,6 @@ int             ijkmp_get_msg(IjkMediaPlayer *mp, AVMessage *msg, int block);
 
 void           *ijkmp_get_context(IjkMediaPlayer *mp);
 int             ijkmp_set_subtitle_index(IjkMediaPlayer *mp, int index);
+int             ijkmp_set_audio_index(IjkMediaPlayer *mp, int index);
 
 #endif

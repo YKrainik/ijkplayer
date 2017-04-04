@@ -99,7 +99,9 @@ typedef NS_ENUM(NSInteger, IJKMPMovieTimeOption) {
 @property (nonatomic) float playbackVolume;
 
 @property (nonatomic) int subtitleTrackIndex;
+@property (nonatomic) int audioTrackIndex;
 @property (nonatomic, readonly) NSArray *subtitles;
+@property (nonatomic, readonly) NSArray *audious;
 
 - (UIImage *)thumbnailImageAtCurrentTime;
 
