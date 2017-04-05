@@ -147,6 +147,11 @@ static void *KVO_AVPlayerItem_playbackBufferEmpty       = &KVO_AVPlayerItem_play
 
     float _playbackRate;
     float _playbackVolume;
+
+    int _subtitleTrackIndex;
+    int _audioTrackIndex;
+    NSArray *_subtitles;
+    NSArray *_audious;
 }
 
 @synthesize view                        = _view;
@@ -163,6 +168,11 @@ static void *KVO_AVPlayerItem_playbackBufferEmpty       = &KVO_AVPlayerItem_play
 @synthesize scalingMode                 = _scalingMode;
 @synthesize shouldAutoplay              = _shouldAutoplay;
 @synthesize isDanmakuMediaAirPlay       = _isDanmakuMediaAirPlay;
+
+@synthesize subtitleTrackIndex = _subtitleTrackIndex;
+@synthesize audioTrackIndex = _audioTrackIndex;
+@synthesize subtitles = _subtitles;
+@synthesize audious = _audious;
 
 static IJKAVMoviePlayerController* instance;
 

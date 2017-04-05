@@ -45,6 +45,9 @@ static const char *kIJKFFRequiredFFmpegVersion = "ff3.2--ijk0.7.6--20170203--001
 
 @interface IJKFFMoviePlayerController()
 
+@property (nonatomic, strong) NSArray *subtitles;
+@property (nonatomic, strong) NSArray *audious;
+
 @end
 
 @implementation IJKFFMoviePlayerController {
@@ -656,6 +659,25 @@ inline static int getPlayerOption(IJKFFOptionCategory category)
     return _glView.fps;
 }
 
+- (void)setSubtitleTrackIndex:(int)subtitleTrackIndex
+{
+    ijkmp_set_subtitle_index(_mediaPlayer, subtitleTrackIndex);
+    NSTimeInterval ret = ijkmp_get_current_position(_mediaPlayer);
+    ijkmp_seek_to(_mediaPlayer, ret);
+}
+
+- (void)setAudioTrackIndex:(int)audioTrackIndex
+{
+    ijkmp_set_audio_index(_mediaPlayer, audioTrackIndex);
+    NSTimeInterval ret = ijkmp_get_current_position(_mediaPlayer);
+    ijkmp_seek_to(_mediaPlayer, ret);
+}
+
+- (int)audioTrackIndex
+{
+    return ijkmp_get_audio_track_index(_mediaPlayer);
+}
+
 inline static NSString *formatedDurationMilli(int64_t duration) {
     if (duration >=  1000) {
         return [NSString stringWithFormat:@"%.2f sec", ((float)duration) / 1000];
@@ -911,6 +933,56 @@ inline static void fillMetaInternal(NSMutableDictionary *meta, IjkMediaMeta *raw
         case FFP_MSG_PREPARED: {
             NSLog(@"FFP_MSG_PREPARED:\n");
 
+            NSMutableArray *subtitles = [NSMutableArray array];
+            NSMutableArray *audious = [NSMutableArray array];
+
+            AVFormatContext *context = ijkmp_get_context(_mediaPlayer);
+
+            for (NSUInteger i = 0; i < context->nb_streams; i++) {
+                AVStream *st = context->streams[i];
+                if (st->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE) {
+
+                    NSMutableString *ms = [NSMutableString string];
+
+                    AVDictionaryEntry *lang = av_dict_get(st->metadata, "title", NULL, 0);
+
+                    if (lang && lang->value) {
+                        NSString *title = [[[NSString alloc] initWithUTF8String:lang->value] stringByTrimmingCharactersInSet:
+                                           [NSCharacterSet whitespaceCharacterSet]];
+                        [ms appendString:title];
+                    } else {
+                        [ms appendFormat:@"Track %lu", (unsigned long)subtitles.count + 1];
+                    }
+
+                    lang = av_dict_get(st->metadata, "language", NULL, 0);
+                    if (lang && lang->value) {
+                        [ms appendFormat:@" - [%s]", lang->value];
+                    }
+                    [subtitles addObject:@{@"index" : [NSNumber numberWithInt:st->index], @"title" : ms}];
+                } else if (st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+                    NSMutableString *ms = [NSMutableString string];
+
+                    AVDictionaryEntry *lang = av_dict_get(st->metadata, "title", NULL, 0);
+
+                    if (lang && lang->value) {
+                        NSString *title = [[[NSString alloc] initWithUTF8String:lang->value] stringByTrimmingCharactersInSet:
+                                           [NSCharacterSet whitespaceCharacterSet]];
+                        [ms appendString:title];
+                    } else {
+                        [ms appendFormat:@"Track %lu", (unsigned long)audious.count + 1];
+                    }
+
+                    lang = av_dict_get(st->metadata, "language", NULL, 0);
+                    if (lang && lang->value) {
+                        [ms appendFormat:@" - [%s]", lang->value];
+                    }
+                    [audious addObject:@{@"index" : [NSNumber numberWithInt:st->index], @"title" : ms}];
+                }
+            }
+
+            self.subtitles = [subtitles copy];
+            self.audious = [audious copy];
+
             _monitor.prepareDuration = (int64_t)SDL_GetTickHR() - _monitor.prepareStartTick;
             int64_t vdec = ijkmp_get_property_int64(_mediaPlayer, FFP_PROP_INT64_VIDEO_DECODER, FFP_PROPV_DECODER_UNKNOWN);
             switch (vdec) {
@@ -1121,6 +1193,20 @@ inline static void fillMetaInternal(NSMutableDictionary *meta, IjkMediaMeta *raw
             [[NSNotificationCenter defaultCenter]
              postNotificationName:IJKMPMoviePlayerFirstAudioFrameRenderedNotification
              object:self];
+            break;
+        }
+        case FFP_MSG_TIMED_TEXT: {
+            //TODO: check avmsg->obj
+            char *timedText = (char *)avmsg->obj;
+            NSString *text = [NSString stringWithUTF8String:timedText];
+
+            if (!text) {
+                text = @"";
+            }
+
+            [[NSNotificationCenter defaultCenter]
+             postNotificationName:IJKMPMoviePlayerTimedTextNotification
+             object:self userInfo:@{@"timedText" : text}];
             break;
         }
         default:

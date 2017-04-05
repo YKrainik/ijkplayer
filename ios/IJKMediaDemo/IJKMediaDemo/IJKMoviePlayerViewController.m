@@ -20,6 +20,12 @@
 #import "IJKCommon.h"
 #import "IJKDemoHistory.h"
 
+@interface IJKVideoViewController ()
+
+@property (nonatomic, strong) UILabel *subtitleLabel;
+
+@end
+
 @implementation IJKVideoViewController
 
 - (void)dealloc
@@ -84,6 +90,33 @@
     self.view.autoresizesSubviews = YES;
     [self.view addSubview:self.player.view];
     [self.view addSubview:self.mediaControl];
+
+    //self.subtitleLabel = [[UILabel alloc] initWithFrame:self.view.bounds];
+    self.subtitleLabel = [[UILabel alloc] init];
+    self.subtitleLabel.backgroundColor = [UIColor clearColor];
+    //    self.subtitleLabel.backgroundColor = [UIColor redColor];
+    self.subtitleLabel.numberOfLines = -1;
+    self.subtitleLabel.font = [UIFont systemFontOfSize:22];
+    self.subtitleLabel.textAlignment = NSTextAlignmentCenter;
+    self.subtitleLabel.textColor = [UIColor whiteColor];
+
+    self.subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.player.view addSubview:self.subtitleLabel];
+
+    //    NSLayoutConstraint *constraint = [NSLayoutConstraint constraintWithItem:self.subtitleLabel attribute:NSLayoutAttributeTop relatedBy:NSLayoutRelationEqual toItem:self.player.view attribute:NSLayoutAttributeTop multiplier:1 constant:0];
+    //    [self.player.view addConstraint:constraint];
+
+    NSLayoutConstraint *constraint = [NSLayoutConstraint constraintWithItem:self.subtitleLabel attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:self.player.view attribute:NSLayoutAttributeHeight multiplier:0.2 constant:0];
+    [self.player.view addConstraint:constraint];
+
+    constraint = [NSLayoutConstraint constraintWithItem:self.subtitleLabel attribute:NSLayoutAttributeBottom relatedBy:NSLayoutRelationEqual toItem:self.player.view attribute:NSLayoutAttributeBottom multiplier:1 constant:0];
+    [self.player.view addConstraint:constraint];
+
+    constraint = [NSLayoutConstraint constraintWithItem:self.subtitleLabel attribute:NSLayoutAttributeLeft relatedBy:NSLayoutRelationEqual toItem:self.player.view attribute:NSLayoutAttributeLeft multiplier:1 constant:0];
+    [self.player.view addConstraint:constraint];
+
+    constraint = [NSLayoutConstraint constraintWithItem:self.subtitleLabel attribute:NSLayoutAttributeRight relatedBy:NSLayoutRelationEqual toItem:self.player.view attribute:NSLayoutAttributeRight multiplier:1 constant:0];
+    [self.player.view addConstraint:constraint];
 
     self.mediaControl.delegatePlayer = self.player;
 }
@@ -272,6 +305,13 @@
     }
 }
 
+- (void)movieDidGetTimedText:(NSNotification*)notification
+{
+    NSString *text = notification.userInfo[@"timedText"];
+    NSLog(@"TEXT: %@", text);
+    self.subtitleLabel.text = text;
+}
+
 #pragma mark Install Movie Notifications
 
 /* Register observers for the various movie object notifications. */
@@ -296,6 +336,11 @@
                                              selector:@selector(moviePlayBackStateDidChange:)
                                                  name:IJKMPMoviePlayerPlaybackStateDidChangeNotification
                                                object:_player];
+
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(movieDidGetTimedText:)
+                                                 name:IJKMPMoviePlayerTimedTextNotification
+                                               object:_player];
 }
 
 #pragma mark Remove Movie Notification Handlers
@@ -307,6 +352,7 @@
     [[NSNotificationCenter defaultCenter]removeObserver:self name:IJKMPMoviePlayerPlaybackDidFinishNotification object:_player];
     [[NSNotificationCenter defaultCenter]removeObserver:self name:IJKMPMediaPlaybackIsPreparedToPlayDidChangeNotification object:_player];
     [[NSNotificationCenter defaultCenter]removeObserver:self name:IJKMPMoviePlayerPlaybackStateDidChangeNotification object:_player];
+    [[NSNotificationCenter defaultCenter]removeObserver:self name:IJKMPMoviePlayerTimedTextNotification object:_player];
 }
 
 @end
