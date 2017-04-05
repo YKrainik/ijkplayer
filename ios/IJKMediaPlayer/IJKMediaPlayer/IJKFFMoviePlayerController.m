@@ -673,6 +673,11 @@ inline static int getPlayerOption(IJKFFOptionCategory category)
     ijkmp_seek_to(_mediaPlayer, ret);
 }
 
+- (int)audioTrackIndex
+{
+    return ijkmp_get_audio_track_index(_mediaPlayer);
+}
+
 inline static NSString *formatedDurationMilli(int64_t duration) {
     if (duration >=  1000) {
         return [NSString stringWithFormat:@"%.2f sec", ((float)duration) / 1000];
@@ -964,7 +969,7 @@ inline static void fillMetaInternal(NSMutableDictionary *meta, IjkMediaMeta *raw
                                            [NSCharacterSet whitespaceCharacterSet]];
                         [ms appendString:title];
                     } else {
-                        [ms appendFormat:@"Track %lu", (unsigned long)subtitles.count + 1];
+                        [ms appendFormat:@"Track %lu", (unsigned long)audious.count + 1];
                     }
 
                     lang = av_dict_get(st->metadata, "language", NULL, 0);

@@ -829,3 +829,8 @@ int ijkmp_set_audio_index(IjkMediaPlayer *mp, int index)
 
     return result;
 }
+
+int ijkmp_get_audio_track_index(IjkMediaPlayer *mp)
+{
+    return mp->ffplayer->is->audio_stream;
+}
