@@ -184,10 +184,47 @@
     [self.mediaControl refreshMediaControl];
 }
 
+static int subtitleIndex = -1;
+static int audioIndex = -1;
+
 - (IBAction)onClickPause:(id)sender
 {
-    [self.player pause];
-    [self.mediaControl refreshMediaControl];
+    //    [self.player pause];
+    //    [self.mediaControl refreshMediaControl];
+//    NSArray *subtitles = [self.player subtitles];
+//
+//    NSLog(@"%@", subtitles);
+//
+//    subtitleIndex++;
+//    if (subtitleIndex >= subtitles.count) {
+//        subtitleIndex = -1;
+//    }
+//
+//    if (subtitleIndex >= 0) {
+//        NSDictionary *subtitleDict = subtitles[subtitleIndex];
+//        int index = [[subtitleDict objectForKey:@"index"] intValue];
+//        self.player.subtitleTrackIndex = index;
+//    } else {
+//        self.player.subtitleTrackIndex = -1;
+//        self.subtitleLabel.text = @"";
+//    }
+
+    NSArray *audious = [self.player audious];
+
+    NSLog(@"%@", audious);
+
+    audioIndex++;
+    if (audioIndex >= audious.count) {
+        audioIndex = -1;
+    }
+
+    if (audioIndex >= 0) {
+        NSDictionary *audioDict = audious[audioIndex];
+        int index = [[audioDict objectForKey:@"index"] intValue];
+        self.player.audioTrackIndex = index;
+    } else {
+        self.player.audioTrackIndex = -1;
+    }
 }
 
 - (IBAction)didSliderTouchDown
