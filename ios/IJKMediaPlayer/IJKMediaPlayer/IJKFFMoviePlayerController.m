@@ -1217,7 +1217,8 @@ inline static void fillMetaInternal(NSMutableDictionary *meta, IjkMediaMeta *raw
             [[NSNotificationCenter defaultCenter]
              postNotificationName:IJKMPMoviePlayerTimedTextNotification
              object:self userInfo:@{@"timedText" : text}];
-	     break;
+            break;
+        }
         case FFP_MSG_ACCURATE_SEEK_COMPLETE: {
             NSLog(@"FFP_MSG_ACCURATE_SEEK_COMPLETE:\n");
             [[NSNotificationCenter defaultCenter]
