@@ -43,6 +43,7 @@
 #define FFP_MSG_PLAYBACK_STATE_CHANGED      700
 #define FFP_MSG_TIMED_TEXT                  800
 #define FFP_MSG_ACCURATE_SEEK_COMPLETE      900     /* arg1 = current position*/
+#define FFP_MSG_GET_IMG_STATE               1000    /* arg1 = timestamp, arg2 = result code, obj = file name*/
 
 #define FFP_MSG_VIDEO_DECODER_OPEN          10001
 
@@ -56,6 +57,7 @@
 #define FFP_PROP_FLOAT_PLAYBACK_VOLUME                  10006
 #define FFP_PROP_FLOAT_AVDELAY                          10004
 #define FFP_PROP_FLOAT_AVDIFF                           10005
+#define FFP_PROP_FLOAT_DROP_FRAME_RATE                  10007
 
 #define FFP_PROP_INT64_SELECTED_VIDEO_STREAM            20001
 #define FFP_PROP_INT64_SELECTED_AUDIO_STREAM            20002
@@ -86,7 +88,7 @@
 
 #define FFP_PROP_INT64_CACHE_STATISTIC_PHYSICAL_POS     20205
 
-#define FFP_PROP_INT64_CACHE_STATISTIC_BUF_FORWARDS     20206
+#define FFP_PROP_INT64_CACHE_STATISTIC_FILE_FORWARDS    20206
 
 #define FFP_PROP_INT64_CACHE_STATISTIC_FILE_POS         20207
 

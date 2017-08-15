@@ -79,6 +79,7 @@
 
 #define BUFFERING_CHECK_PER_BYTES               (512)
 #define BUFFERING_CHECK_PER_MILLISECONDS        (500)
+#define FAST_BUFFERING_CHECK_PER_MILLISECONDS   (100)
 
 #define MAX_QUEUE_SIZE (15 * 1024 * 1024)
 #ifdef FFP_MERGE
@@ -137,6 +138,23 @@
 
 static unsigned sws_flags = SWS_BICUBIC;
 #endif
+
+#define HD_IMAGE 2  // 640*360
+#define SD_IMAGE 1  // 320*180
+#define LD_IMAGE 0  // 160*90
+
+typedef struct GetImgInfo {
+    char *img_path;
+    int64_t start_time;
+    int64_t end_time;
+    int64_t frame_interval;
+    int num;
+    int count;
+    int width;
+    int height;
+    AVCodecContext *frame_img_codec_ctx;
+    struct SwsContext *frame_img_convert_ctx;
+} GetImgInfo;
 
 typedef struct MyAVPacketList {
     AVPacket pkt;
@@ -287,7 +305,7 @@ typedef struct VideoState {
     int audio_stream;
 
     int av_sync_type;
-
+    void *handle;
     double audio_clock;
     int audio_clock_serial;
     double audio_diff_cum; /* used for AV difference average computation */
@@ -299,8 +317,10 @@ typedef struct VideoState {
     int audio_hw_buf_size;
     uint8_t *audio_buf;
     uint8_t *audio_buf1;
+    short *audio_new_buf;  /* for soundtouch buf */
     unsigned int audio_buf_size; /* in bytes */
     unsigned int audio_buf1_size;
+    unsigned int audio_new_buf_size;
     int audio_buf_index; /* in bytes */
     int audio_write_buf_size;
     int audio_volume;
@@ -481,9 +501,12 @@ typedef struct FFStatistic
     int64_t latest_seek_load_duration;
     int64_t byte_count;
     int64_t cache_physical_pos;
-    int64_t cache_buf_forwards;
+    int64_t cache_file_forwards;
     int64_t cache_file_pos;
     int64_t cache_count_bytes;
+    int drop_frame_count;
+    int decode_frame_count;
+    float drop_frame_rate;
 } FFStatistic;
 
 #define FFP_TCP_READ_SAMPLE_RANGE 2000
@@ -630,6 +653,7 @@ typedef struct FFPlayer {
     int packet_buffering;
     int pictq_size;
     int max_fps;
+    int startup_volume;
 
     int videotoolbox;
     int vtb_max_frame_width;
@@ -646,6 +670,7 @@ typedef struct FFPlayer {
     int mediacodec_auto_rotate;
 
     int opensles;
+    int soundtouch_enable;
 
     char *iformat_name;
 
@@ -676,6 +701,10 @@ typedef struct FFPlayer {
     IjkIOManagerContext *ijkio_manager_ctx;
 
     int enable_accurate_seek;
+    int mediacodec_sync;
+    int skip_calc_frame_rate;
+    int get_frame_mode;
+    GetImgInfo *get_img_info;
 } FFPlayer;
 
 #define fftime_to_milliseconds(ts) (av_rescale(ts, 1000, AV_TIME_BASE))
@@ -774,6 +803,7 @@ inline static void ffp_reset_internal(FFPlayer *ffp)
     ffp->mediacodec_auto_rotate         = 0; // option
 
     ffp->opensles                       = 0; // option
+    ffp->soundtouch_enable              = 0; // option
 
     ffp->iformat_name                   = NULL; // option
 

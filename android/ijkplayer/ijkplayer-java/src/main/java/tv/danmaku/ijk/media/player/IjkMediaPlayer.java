@@ -54,7 +54,7 @@ import java.util.Map;
 
 import tv.danmaku.ijk.media.player.annotations.AccessedByNative;
 import tv.danmaku.ijk.media.player.annotations.CalledByNative;
-import tv.danmaku.ijk.media.player.misc.IIjkIOHttp;
+import tv.danmaku.ijk.media.player.misc.IAndroidIO;
 import tv.danmaku.ijk.media.player.misc.IMediaDataSource;
 import tv.danmaku.ijk.media.player.misc.ITrackInfo;
 import tv.danmaku.ijk.media.player.misc.IjkTrackInfo;
@@ -108,6 +108,7 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
     public static final int PROP_FLOAT_VIDEO_DECODE_FRAMES_PER_SECOND       = 10001;
     public static final int PROP_FLOAT_VIDEO_OUTPUT_FRAMES_PER_SECOND       = 10002;
     public static final int FFP_PROP_FLOAT_PLAYBACK_RATE                    = 10003;
+    public static final int FFP_PROP_FLOAT_DROP_FRAME_RATE                  = 10007;
 
     public static final int FFP_PROP_INT64_SELECTED_VIDEO_STREAM            = 20001;
     public static final int FFP_PROP_INT64_SELECTED_AUDIO_STREAM            = 20002;
@@ -130,7 +131,7 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
     public static final int FFP_PROP_INT64_ASYNC_STATISTIC_BUF_CAPACITY     = 20203;
     public static final int FFP_PROP_INT64_TRAFFIC_STATISTIC_BYTE_COUNT     = 20204;
     public static final int FFP_PROP_INT64_CACHE_STATISTIC_PHYSICAL_POS     = 20205;
-    public static final int FFP_PROP_INT64_CACHE_STATISTIC_BUF_FORWARDS     = 20206;
+    public static final int FFP_PROP_INT64_CACHE_STATISTIC_FILE_FORWARDS    = 20206;
     public static final int FFP_PROP_INT64_CACHE_STATISTIC_FILE_POS         = 20207;
     public static final int FFP_PROP_INT64_CACHE_STATISTIC_COUNT_BYTES      = 20208;
     public static final int FFP_PROP_INT64_BIT_RATE                         = 20100;
@@ -144,7 +145,7 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
     private long mNativeMediaDataSource;
 
     @AccessedByNative
-    private long mNativeIjkIOHttp;
+    private long mNativeAndroidIO;
 
     @AccessedByNative
     private int mNativeSurfaceTexture;
@@ -242,6 +243,9 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
          */
         native_setup(new WeakReference<IjkMediaPlayer>(this));
     }
+
+    private native void _setFrameAtTime(String imgCachePath, long startTime, long endTime, int num, int imgDefinition)
+            throws IllegalArgumentException, IllegalStateException;
 
     /*
      * Update the IjkMediaPlayer SurfaceTexture. Call after setting a new
@@ -481,9 +485,9 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
         _setDataSource(mediaDataSource);
     }
 
-    public void setDataSourceIjkIOHttp(IIjkIOHttp ijkIOHttp)
+    public void setAndroidIOCallback(IAndroidIO androidIO)
             throws IllegalArgumentException, SecurityException, IllegalStateException {
-        _setDataSourceIjkIOHttp(ijkIOHttp);
+        _setAndroidIOCallback(androidIO);
     }
 
     private native void _setDataSource(String path, String[] keys, String[] values)
@@ -495,8 +499,14 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
     private native void _setDataSource(IMediaDataSource mediaDataSource)
             throws IllegalArgumentException, SecurityException, IllegalStateException;
 
-    private native void _setDataSourceIjkIOHttp(IIjkIOHttp ijkIOHttp)
+    private native void _setAndroidIOCallback(IAndroidIO androidIO)
             throws IllegalArgumentException, SecurityException, IllegalStateException;
+
+    private native void _injectCacheNode(int index, long fileLogicalPos, long physicalPos, long cacheSize, long fileSize);
+
+    public void injectCacheNode(int index, long fileLogicalPos, long physicalPos, long cacheSize, long fileSize) {
+        _injectCacheNode(index, fileLogicalPos, physicalPos, cacheSize, fileSize);
+     }
 
     @Override
     public String getDataSource() {
@@ -803,8 +813,8 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
         return _getPropertyLong(FFP_PROP_INT64_CACHE_STATISTIC_PHYSICAL_POS, 0);
     }
 
-    public long getCacheStatisticBufForwards() {
-        return _getPropertyLong(FFP_PROP_INT64_CACHE_STATISTIC_BUF_FORWARDS, 0);
+    public long getCacheStatisticFileForwards() {
+        return _getPropertyLong(FFP_PROP_INT64_CACHE_STATISTIC_FILE_FORWARDS, 0);
     }
 
     public long getCacheStatisticFilePos() {
@@ -831,6 +841,10 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
     private native void  _setPropertyFloat(int property, float value);
     private native long  _getPropertyLong(int property, long defaultValue);
     private native void  _setPropertyLong(int property, long value);
+
+    public float getDropFrameRate() {
+        return _getPropertyFloat(FFP_PROP_FLOAT_DROP_FRAME_RATE, .0f);
+    }
 
     @Override
     public native void setVolume(float leftVolume, float rightVolume);

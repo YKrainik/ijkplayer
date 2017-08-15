@@ -265,6 +265,8 @@ static IJKAVMoviePlayerController* instance;
                                  [[NSNotificationCenter defaultCenter]
                                   postNotificationName:IJKMPMovieNaturalSizeAvailableNotification
                                   object:self];
+
+                                 [self setPlaybackVolume:_playbackVolume];
                              });
                          }];
 }
@@ -334,10 +336,19 @@ static IJKAVMoviePlayerController* instance;
 - (UIImage *)thumbnailImageAtCurrentTime
 {
     AVAssetImageGenerator *imageGenerator = [AVAssetImageGenerator assetImageGeneratorWithAsset:_playAsset];
-    NSError *error = nil;
-    CMTime time = CMTimeMakeWithSeconds(self.currentPlaybackTime, 1);
-    CMTime actualTime;
-    CGImageRef cgImage = [imageGenerator copyCGImageAtTime:time actualTime:&actualTime error:&error];
+    CMTime expectedTime = _playerItem.currentTime;
+    CGImageRef cgImage = NULL;
+    
+    imageGenerator.requestedTimeToleranceBefore = kCMTimeZero;
+    imageGenerator.requestedTimeToleranceAfter = kCMTimeZero;
+    cgImage = [imageGenerator copyCGImageAtTime:expectedTime actualTime:NULL error:NULL];
+    
+    if (!cgImage) {
+        imageGenerator.requestedTimeToleranceBefore = kCMTimePositiveInfinity;
+        imageGenerator.requestedTimeToleranceAfter = kCMTimePositiveInfinity;
+        cgImage = [imageGenerator copyCGImageAtTime:expectedTime actualTime:NULL error:NULL];
+    }
+    
     UIImage *image = [UIImage imageWithCGImage:cgImage];
     return image;
 }
@@ -465,6 +476,10 @@ static IJKAVMoviePlayerController* instance;
     _playbackVolume = playbackVolume;
     if (_player != nil && _player.volume != playbackVolume) {
         _player.volume = playbackVolume;
+    }
+    BOOL muted = fabs(playbackVolume) < 1e-6;
+    if (_player != nil && _player.muted != muted) {
+        _player.muted = muted;
     }
 }
 

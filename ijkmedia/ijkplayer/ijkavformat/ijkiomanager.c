@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 
 static int ijkio_manager_alloc(IjkIOManagerContext **ph, void *opaque)
 {
@@ -44,6 +45,7 @@ static int ijkio_manager_alloc(IjkIOManagerContext **ph, void *opaque)
 
     h->ijkio_app_ctx->threadpool_ctx = ijk_threadpool_create(5, 5, 0);
     h->ijkio_app_ctx->cache_info_map = ijk_map_create();
+    h->ijkio_app_ctx->fd             = -1;
     *ph = h;
     return 0;
 }
@@ -51,6 +53,47 @@ static int ijkio_manager_alloc(IjkIOManagerContext **ph, void *opaque)
 int ijkio_manager_create(IjkIOManagerContext **ph, void *opaque)
 {
     return ijkio_manager_alloc(ph, opaque);
+}
+
+void ijkio_manager_inject_node(IjkIOManagerContext *h, int index, int64_t file_logical_pos, int64_t physical_pos, int64_t cache_size, int64_t file_size) {
+    if (!h->ijkio_app_ctx)
+        return;
+    if (!h->ijkio_app_ctx->ijkio_cache_init_node) {
+        h->ijkio_app_ctx->ijkio_cache_init_node = (IjkIOAppCacheInitNode *)calloc(1, sizeof(IjkIOAppCacheInitNode));
+        if (!h->ijkio_app_ctx->ijkio_cache_init_node)
+            return;
+        h->ijkio_app_ctx->ijkio_cache_init_node->file_logical_pos = file_logical_pos;
+        h->ijkio_app_ctx->ijkio_cache_init_node->physical_pos = physical_pos;
+        h->ijkio_app_ctx->ijkio_cache_init_node->cache_size = cache_size;
+        h->ijkio_app_ctx->ijkio_cache_init_node->file_size = file_size;
+        h->ijkio_app_ctx->ijkio_cache_init_node->index = index;
+        h->ijkio_app_ctx->init_node_count++;
+
+        IjkCacheTreeInfo *tree_info = ijk_map_get(h->ijkio_app_ctx->cache_info_map, index);
+        if (tree_info == NULL) {
+            IjkCacheTreeInfo *tree_info = calloc(1, sizeof(IjkCacheTreeInfo));
+            tree_info->physical_init_pos = physical_pos;
+            ijk_map_put(h->ijkio_app_ctx->cache_info_map, (int64_t)index, tree_info);
+        }
+    } else {
+        h->ijkio_app_ctx->ijkio_cache_init_node = (IjkIOAppCacheInitNode *)realloc(h->ijkio_app_ctx->ijkio_cache_init_node, sizeof(IjkIOAppCacheInitNode) * (h->ijkio_app_ctx->init_node_count + 1));
+        IjkIOAppCacheInitNode *node = (IjkIOAppCacheInitNode *)(h->ijkio_app_ctx->ijkio_cache_init_node + h->ijkio_app_ctx->init_node_count);
+        if (!node)
+            return;
+        node->file_logical_pos = file_logical_pos;
+        node->physical_pos = physical_pos;
+        node->cache_size = cache_size;
+        node->file_size = file_size;
+        node->index = index;
+        h->ijkio_app_ctx->init_node_count++;
+        IjkCacheTreeInfo *tree_info = ijk_map_get(h->ijkio_app_ctx->cache_info_map, index);
+        if (tree_info == NULL) {
+            IjkCacheTreeInfo *tree_info = calloc(1, sizeof(IjkCacheTreeInfo));
+            tree_info->physical_init_pos = physical_pos;
+            ijk_map_put(h->ijkio_app_ctx->cache_info_map, (int64_t)index, tree_info);
+        }
+    }
+
 }
 
 static int enu_free(void *opaque, void *elem)
@@ -80,7 +123,9 @@ void ijkio_manager_destroy(IjkIOManagerContext *h)
         }
 
         if (0 != strlen(h->ijkio_app_ctx->cache_file_path)) {
-            remove(h->ijkio_app_ctx->cache_file_path);
+            if (h->ijkio_app_ctx->fd >= 0) {
+                close(h->ijkio_app_ctx->fd);
+            }
         }
 
         ijkio_application_closep(&h->ijkio_app_ctx);
@@ -132,7 +177,7 @@ int ijkio_manager_io_open(IjkIOManagerContext *h, const char *url, int flags, Ij
     if (!h)
         return ret;
     IjkAVDictionaryEntry *t = NULL;
-    t = ijk_av_dict_get(*options, "cache_file_path", t, IJK_AV_DICT_IGNORE_SUFFIX);
+    t = ijk_av_dict_get(*options, "cache_file_path", t, IJK_AV_DICT_MATCH_CASE);
     if (t) {
         strcpy(h->ijkio_app_ctx->cache_file_path, t->value);
     }
